@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Batalha Naval</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family: Arial, sans-serif;
+    background:
+    linear-gradient(180deg,#071120,#0b1f3a,#102b52);
+    color:white;
+    min-height:100vh;
+    text-align:center;
+    padding:30px;
+}
+
+h1{
+    font-size:48px;
+    margin-bottom:10px;
+    letter-spacing:3px;
+    text-shadow:0 0 15px #4da6ff;
+}
+
+#status{
+    margin:20px;
+    font-size:24px;
+    font-weight:bold;
+    color:#9dd6ff;
+}
+
+.board{
+    display:grid;
+    grid-template-columns: repeat(10, 50px);
+    gap:5px;
+    justify-content:center;
+    margin:30px auto;
+    padding:20px;
+    background:rgba(255,255,255,0.05);
+    border-radius:20px;
+    box-shadow:
+    0 0 25px rgba(0,0,0,0.5),
+    0 0 15px rgba(77,166,255,0.3);
+    backdrop-filter: blur(5px);
+}
+
+.cell{
+    width:50px;
+    height:50px;
+    background:linear-gradient(145deg,#3b82f6,#2563eb);
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.2);
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.cell:hover{
+    transform:scale(1.07);
+    box-shadow:0 0 12px #60a5fa;
+}
+
+.cell.hit{
+    background:
+    radial-gradient(circle,#ff6b6b,#b91c1c);
+    box-shadow:0 0 15px red;
+}
+
+.cell.miss{
+    background:
+    radial-gradient(circle,#ffffff,#cbd5e1);
+}
+
+button{
+    padding:14px 28px;
+    font-size:18px;
+    font-weight:bold;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    background:
+    linear-gradient(145deg,#2563eb,#1d4ed8);
+    color:white;
+    transition:0.2s;
+    box-shadow:0 0 15px rgba(37,99,235,0.5);
+}
+
+button:hover{
+    transform:scale(1.05);
+    box-shadow:0 0 20px rgba(96,165,250,0.8);
+}
+
+#transitionScreen{
+    display:none;
+    margin-top:60px;
+}
+
+#transitionScreen h2{
+    font-size:34px;
+    margin-bottom:25px;
+    color:#93c5fd;
+    text-shadow:0 0 10px #60a5fa;
+}
+
+#gameScreen{
+    display:none;
+}
+
+.footer{
+    margin-top:30px;
+    opacity:0.7;
+    font-size:14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>BATALHA NAVAL</h1>
+
+<div id="menu">
+    <button onclick="startGame()">INICIAR JOGO</button>
+</div>
+
+<div id="transitionScreen">
+    <h2 id="transitionText"></h2>
+    <button onclick="continueTurn()">CONTINUAR</button>
+</div>
+
+<div id="gameScreen">
+    <div id="status"></div>
+    <div class="board" id="board"></div>
+</div>
+
+<div class="footer">
+    Projeto desenvolvido para faculdade
+</div>
+
+<script>
+
+const boardElement = document.getElementById("board");
+const statusText = document.getElementById("status");
+
+const menu = document.getElementById("menu");
+const transitionScreen = document.getElementById("transitionScreen");
+const gameScreen = document.getElementById("gameScreen");
+const transitionText = document.getElementById("transitionText");
+
+const totalShips = 5;
+
+let currentPlayer = 1;
+
+let player1Ships = [];
+let player2Ships = [];
+
+let player1Board = [];
+let player2Board = [];
+
+let player1Hits = 0;
+let player2Hits = 0;
+
+function createEmptyBoard(){
+    return Array(100).fill("");
+}
+
+player1Board = createEmptyBoard();
+player2Board = createEmptyBoard();
+
+function startGame(){
+
+    menu.style.display = "none";
+
+    generateShips();
+
+    showTransition();
+}
+
+function generateShips(){
+
+    while(player1Ships.length < totalShips){
+
+        let random = Math.floor(Math.random() * 100);
+
+        if(!player1Ships.includes(random)){
+            player1Ships.push(random);
+        }
+    }
+
+    while(player2Ships.length < totalShips){
+
+        let random = Math.floor(Math.random() * 100);
+
+        if(!player2Ships.includes(random)){
+            player2Ships.push(random);
+        }
+    }
+}
+
+function showTransition(){
+
+    gameScreen.style.display = "none";
+    transitionScreen.style.display = "block";
+
+    transitionText.innerText =
+        "Passe para o Jogador " + currentPlayer;
+}
+
+function continueTurn(){
+
+    transitionScreen.style.display = "none";
+    gameScreen.style.display = "block";
+
+    statusText.innerText =
+        "Turno do Jogador " + currentPlayer;
+
+    renderBoard();
+}
+
+function renderBoard(){
+
+    boardElement.innerHTML = "";
+
+    let currentBoard =
+        currentPlayer === 1
+        ? player2Board
+        : player1Board;
+
+    for(let i = 0; i < 100; i++){
+
+        const cell = document.createElement("div");
+
+        cell.classList.add("cell");
+
+        if(currentBoard[i] === "hit"){
+            cell.classList.add("hit");
+        }
+
+        if(currentBoard[i] === "miss"){
+            cell.classList.add("miss");
+        }
+
+        cell.dataset.index = i;
+
+        cell.addEventListener("click", attackCell);
+
+        boardElement.appendChild(cell);
+    }
+}
+
+function attackCell(){
+
+    const index = Number(this.dataset.index);
+
+    let enemyShips;
+    let currentBoard;
+
+    if(currentPlayer === 1){
+
+        enemyShips = player2Ships;
+        currentBoard = player2Board;
+
+    }else{
+
+        enemyShips = player1Ships;
+        currentBoard = player1Board;
+    }
+
+    if(currentBoard[index] !== ""){
+        return;
+    }
+
+    if(enemyShips.includes(index)){
+
+        currentBoard[index] = "hit";
+
+        if(currentPlayer === 1){
+
+            player1Hits++;
+
+            if(player1Hits >= totalShips){
+
+                endGame("JOGADOR 1 VENCEU!");
+                return;
+            }
+
+        }else{
+
+            player2Hits++;
+
+            if(player2Hits >= totalShips){
+
+                endGame("JOGADOR 2 VENCEU!");
+                return;
+            }
+        }
+
+    }else{
+
+        currentBoard[index] = "miss";
+    }
+
+    renderBoard();
+
+    currentPlayer =
+        currentPlayer === 1 ? 2 : 1;
+
+    setTimeout(showTransition, 1000);
+}
+
+function endGame(message){
+
+    gameScreen.style.display = "none";
+
+    transitionScreen.style.display = "block";
+
+    transitionText.innerText = message;
+}
+
+</script>
+
+</body>
+</html>
